@@ -37,7 +37,8 @@ namespace ConsoleApplication11
                 delegateTimer.Stop();
 
                 baselineTimer.Start();
-                result = f("World!");
+                Func<string> fc4 = () => f("World!");
+                result = fc4();
                 baselineTimer.Stop();
 
                 lcgTimer.Start();
@@ -49,6 +50,7 @@ namespace ConsoleApplication11
             Console.WriteLine("Func<>.ctor: {0}", ctorTimer.ElapsedMilliseconds);
             Console.WriteLine("Delegate:    {0}", delegateTimer.ElapsedMilliseconds);
             Console.WriteLine("Baseline:    {0}", baselineTimer.ElapsedMilliseconds);
+            Console.WriteLine("LCG:         {0}", lcgTimer.ElapsedMilliseconds);
         }
 
         private static Func<string> CreateDelegateApproach(Func<string, string> f)
@@ -63,23 +65,59 @@ namespace ConsoleApplication11
 
         private static Func<TReturn> CreateLCGApproach<TArg, TReturn>(Func<TArg, TReturn> f, TArg arg)
         {
-            var an = new AssemblyName("test_" + Guid.NewGuid());
-            var ab = AssemblyBuilder.DefineDynamicAssembly(an, AssemblyBuilderAccess.Run);
-            var dm = ab.DefineDynamicModule("Main");
-            var tb = dm.DefineType("SomeType");
-            var mb = tb.DefineMethod("HelperMethod", MethodAttributes.Static | MethodAttributes.Public, typeof(Func<TReturn>), new Type[] { typeof(TArg) });
-            var il = mb.GetILGenerator();
+            if (f.Target != null)
+            {
+                throw new ArgumentException();
+            }
 
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldftn, f.Method);
-            il.Emit(OpCodes.Newobj, typeof(Func<TReturn>).GetConstructors().Single());
-            il.Emit(OpCodes.Ret);
-
-            var type = tb.CreateType();
-            var method = type.GetMethod(mb.Name, BindingFlags.Static | BindingFlags.Public);
-            var fastMethod = (Func<TArg, Func<TReturn>>)method.CreateDelegate(typeof(Func<TArg, Func<TReturn>>));
-            Func<TReturn> simpleWrapper = fastMethod(arg);
+            var factory = FactoryMethodHelper<TArg, TReturn>.GetFactory(f.Method);
+            Func<TReturn> simpleWrapper = factory(arg);
             return simpleWrapper;
+        }
+
+        private static class FuncCtorHelper<TReturn>
+        {
+            internal static readonly ConstructorInfo FuncOfTCtor = typeof(Func<TReturn>).GetConstructors().Single();
+        }
+
+        private static class FactoryMethodHelper<TArg, TReturn>
+        {
+            private static readonly Dictionary<MethodInfo, Func<TArg, Func<TReturn>>> helperMethods = new Dictionary<MethodInfo, Func<TArg, Func<TReturn>>>();
+
+            internal static Func<TArg, Func<TReturn>> GetFactory(MethodInfo method)
+            {
+                Func<TArg, Func<TReturn>> factory;
+                lock (helperMethods)
+                {
+                    helperMethods.TryGetValue(method, out factory);
+                }
+
+                if (factory == null)
+                {
+                    factory = CreateFactory(method);
+
+                    lock (helperMethods)
+                    {
+                        helperMethods[method] = factory;
+                    }
+                }
+
+                return factory;
+            }
+
+            private static Func<TArg, Func<TReturn>> CreateFactory(MethodInfo m)
+            {
+                var method = new DynamicMethod("test", typeof(Func<TReturn>), new Type[] { typeof(TArg) }, restrictedSkipVisibility: true);
+                var il = method.GetILGenerator();
+
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldftn, m);
+                il.Emit(OpCodes.Newobj, FuncCtorHelper<TReturn>.FuncOfTCtor);
+                il.Emit(OpCodes.Ret);
+
+                var fastMethod = (Func<TArg, Func<TReturn>>)method.CreateDelegate(typeof(Func<TArg, Func<TReturn>>));
+                return fastMethod;
+            }
         }
 
         public static string SomeAction(string value)
