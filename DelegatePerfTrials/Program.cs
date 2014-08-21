@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,23 +28,19 @@ namespace ConsoleApplication11
             for (int i = 0; i < iterations; i++)
             {
                 ctorTimer.Start();
-                var fc1 = CtorApproach(f, ctor);
-                string result = fc1();
+                string result = A1(f, ctor);
                 ctorTimer.Stop();
 
                 delegateTimer.Start();
-                var fc2 = CreateDelegateApproach(f);
-                result = fc2();
+                result = A2(f);
                 delegateTimer.Stop();
 
                 baselineTimer.Start();
-                Func<string> fc4 = () => f("World!");
-                result = fc4();
+                result = A3(f);
                 baselineTimer.Stop();
 
                 lcgTimer.Start();
-                var fc3 = CreateLCGApproach(f, "World!");
-                result = fc3();
+                result = A4(f);
                 lcgTimer.Stop();
             }
 
@@ -51,6 +48,35 @@ namespace ConsoleApplication11
             Console.WriteLine("Delegate:    {0}", delegateTimer.ElapsedMilliseconds);
             Console.WriteLine("Baseline:    {0}", baselineTimer.ElapsedMilliseconds);
             Console.WriteLine("LCG:         {0}", lcgTimer.ElapsedMilliseconds);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A4(Func<string, string> f)
+        {
+            var fc3 = CreateLCGApproach(f, "World!");
+            return fc3();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A3(Func<string, string> f)
+        {
+            Func<string> fc4 = () => f("World!");
+            return fc4();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A2(Func<string, string> f)
+        {
+            var fc2 = CreateDelegateApproach(f);
+            return fc2();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A1(Func<string, string> f, ConstructorInfo ctor)
+        {
+            var fc1 = CtorApproach(f, ctor);
+            string result = fc1();
+            return result;
         }
 
         private static Func<string> CreateDelegateApproach(Func<string, string> f)
