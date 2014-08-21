@@ -89,8 +89,7 @@ namespace ConsoleApplication11
         private static string A1(Func<string, string> f, ConstructorInfo ctor)
         {
             var fc1 = CtorApproach(f, ctor);
-            string result = fc1();
-            return result;
+            return fc1();
         }
 
         private static Func<string> CreateDelegateApproach(Func<string, string> f)
