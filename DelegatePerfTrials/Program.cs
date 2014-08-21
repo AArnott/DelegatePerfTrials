@@ -37,7 +37,7 @@ namespace ConsoleApplication11
 
                 baselineTimer.Start();
                 result = f("World!");
-                delegateTimer.Stop();
+                baselineTimer.Stop();
             }
 
             Console.WriteLine("Func<>.ctor: {0}", ctorTimer.ElapsedMilliseconds);
