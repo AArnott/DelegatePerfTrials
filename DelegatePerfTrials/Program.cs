@@ -17,6 +17,7 @@ namespace ConsoleApplication11
         {
             var f = new Func<string, string>(SomeAction);
             var ctor = typeof(Func<string>).GetConstructors().Single();
+            var factory = FactoryMethodHelper<string, string>.GetFactory(f.Method);
 
             const int iterations = 50000;
 
@@ -24,6 +25,7 @@ namespace ConsoleApplication11
             var delegateTimer = new Stopwatch();
             var baselineTimer = new Stopwatch();
             var lcgTimer = new Stopwatch();
+            var lcgPreFactoryTimer = new Stopwatch();
 
             for (int i = 0; i < iterations; i++)
             {
@@ -42,12 +44,24 @@ namespace ConsoleApplication11
                 lcgTimer.Start();
                 result = A4(f);
                 lcgTimer.Stop();
+
+                lcgPreFactoryTimer.Start();
+                result = A5(f, factory);
+                lcgPreFactoryTimer.Stop();
             }
 
             Console.WriteLine("Func<>.ctor: {0}", ctorTimer.ElapsedMilliseconds);
             Console.WriteLine("Delegate:    {0}", delegateTimer.ElapsedMilliseconds);
             Console.WriteLine("Baseline:    {0}", baselineTimer.ElapsedMilliseconds);
             Console.WriteLine("LCG:         {0}", lcgTimer.ElapsedMilliseconds);
+            Console.WriteLine("LCG (pref):  {0}", lcgPreFactoryTimer.ElapsedMilliseconds);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A5(Func<string, string> f, Func<string, Func<string>> factory)
+        {
+            var fc3 = factory("World!");
+            return fc3();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
