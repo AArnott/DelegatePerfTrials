@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApplication11
 {
-    public class Program
+    class Program
     {
         static void Main(string[] args)
         {
@@ -146,7 +146,7 @@ namespace ConsoleApplication11
             }
         }
 
-        public static string SomeAction(string value)
+        private static string SomeAction(string value)
         {
             return string.Format("Hello, {0}!", value);
         }
