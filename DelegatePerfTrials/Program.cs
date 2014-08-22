@@ -15,7 +15,7 @@ namespace ConsoleApplication11
     {
         static void Main(string[] args)
         {
-            var f = new Func<string, string>(SomeAction);
+            var f = new Func<string, string>(Extensions.SomeAction);
             var ctor = typeof(Func<string>).GetConstructors().Single();
             var factory = FactoryMethodHelper<string, string>.GetFactory(f.Method);
 
@@ -26,6 +26,7 @@ namespace ConsoleApplication11
             var baselineTimer = new Stopwatch();
             var lcgTimer = new Stopwatch();
             var lcgPreFactoryTimer = new Stopwatch();
+            var extensionMethodTimer = new Stopwatch();
 
             for (int i = 0; i < iterations; i++)
             {
@@ -48,6 +49,10 @@ namespace ConsoleApplication11
                 lcgPreFactoryTimer.Start();
                 result = A5(f, factory);
                 lcgPreFactoryTimer.Stop();
+
+                extensionMethodTimer.Start();
+                result = A6();
+                extensionMethodTimer.Stop();
             }
 
             Console.WriteLine("Func<>.ctor: {0}", ctorTimer.ElapsedMilliseconds);
@@ -55,6 +60,14 @@ namespace ConsoleApplication11
             Console.WriteLine("Baseline:    {0}", baselineTimer.ElapsedMilliseconds);
             Console.WriteLine("LCG:         {0}", lcgTimer.ElapsedMilliseconds);
             Console.WriteLine("LCG (pref):  {0}", lcgPreFactoryTimer.ElapsedMilliseconds);
+            Console.WriteLine("Ext. method: {0}", extensionMethodTimer.ElapsedMilliseconds);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string A6()
+        {
+            var fc6 = new Func<string>("World!".SomeAction);
+            return fc6();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -158,10 +171,23 @@ namespace ConsoleApplication11
                 return fastMethod;
             }
         }
-
-        private static string SomeAction(string value)
+    }
+    static class Extensions
+    {
+        internal static string SomeAction(this string value)
         {
             return string.Format("Hello, {0}!", value);
+        }
+
+        internal static Func<T> AsFunc<T>(this T value)
+            where T : class
+        {
+            return new Func<T>(value.Return);
+        }
+
+        private static T Return<T>(this T value)
+        {
+            return value;
         }
     }
 }
