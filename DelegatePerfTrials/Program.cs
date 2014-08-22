@@ -146,7 +146,7 @@ namespace ConsoleApplication11
 
             private static Func<TArg, Func<TReturn>> CreateFactory(MethodInfo m)
             {
-                var method = new DynamicMethod("test", typeof(Func<TReturn>), new Type[] { typeof(TArg) }, restrictedSkipVisibility: true);
+                var method = new DynamicMethod(string.Empty, typeof(Func<TReturn>), new Type[] { typeof(TArg) }, typeof(FactoryMethodHelper<TArg, TReturn>), skipVisibility: true);
                 var il = method.GetILGenerator();
 
                 il.Emit(OpCodes.Ldarg_0);
